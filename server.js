@@ -1,3 +1,5 @@
+const MONGODB_URI =
+  "mongodb+srv://stackshamim:jwSbOcmMT4cHZvYZ@mongo-stacker.wakimob.mongodb.net/smart-buy-2?retryWrites=true&w=majority&appName=mongo-stacker";
 // dotenv
 const dotenv = require('dotenv');
 require('dotenv').config();
@@ -16,8 +18,8 @@ app.use(cors());
 app.use(express.json());
 
 // Database connection
-mongoose.connect(process.env.MONGODB_URI).then(() => {
-  console.log('Connected to MongoDB');
+mongoose.connect(MONGODB_URI).then(() => {
+  console.log("Connected to MongoDB");
 });
 
 // Routes
