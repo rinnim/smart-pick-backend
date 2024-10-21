@@ -1,6 +1,3 @@
-const MONGODB_URI =
-  "mongodb+srv://stackshamim:jwSbOcmMT4cHZvYZ@mongo-stacker.wakimob.mongodb.net/smart-buy-2?retryWrites=true&w=majority&appName=mongo-stacker";
-// dotenv
 const dotenv = require('dotenv');
 require('dotenv').config();
 
@@ -10,6 +7,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const productRoutes = require('./routes/product');
+const userRoutes = require('./routes/user');
+const userActionsRoutes = require('./routes/user_actions');
 const app = express();
 
 
@@ -18,13 +17,14 @@ app.use(cors());
 app.use(express.json());
 
 // Database connection
-mongoose.connect(MONGODB_URI).then(() => {
+mongoose.connect(process.env.MONGODB_URI).then(() => {
   console.log("Connected to MongoDB");
 });
 
 // Routes
 app.use('/api/product', productRoutes);
-
+app.use('/auth/user', userRoutes);
+app.use('/api/user-actions',userActionsRoutes);
 
 // Start the server
 const PORT = process.env.PORT;
