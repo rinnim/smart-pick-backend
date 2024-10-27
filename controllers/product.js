@@ -70,6 +70,7 @@ exports.deleteProduct = async (req, res) => {
   }
 };
 // Get products by filters from query params
+// Get products by filters from query params
 exports.getProductsByFilters = async (req, res) => {
   const {
     category,
@@ -81,6 +82,7 @@ exports.getProductsByFilters = async (req, res) => {
     page = 1,
     sortBy,
     sortOrder,
+    search,
   } = req.query;
 
   // Create a query object
@@ -103,6 +105,11 @@ exports.getProductsByFilters = async (req, res) => {
     if (maxPrice) query.price.$lte = Number(maxPrice); // Less than or equal to maxPrice
   }
 
+  // Add search filter for product name (case-insensitive)
+  if (search) {
+    query.name = { $regex: search, $options: 'i' }; 
+  }
+
   // Set up sorting
   let sortOptions = {};
   if (sortBy && ["price", "discount"].includes(sortBy)) {
@@ -118,8 +125,8 @@ exports.getProductsByFilters = async (req, res) => {
   };
 
   try {
-    console.log("Query:", query);
-    console.log("Options:", options);
+    // console.log("Query:", query);
+    // console.log("Options:", options);
     const products = await Product.find(query, null, options);
     const totalProducts = await Product.countDocuments(query);
 
@@ -137,9 +144,11 @@ exports.getProductsByFilters = async (req, res) => {
 
 
 
+
 // Create or update a product
 exports.createOrUpdateProduct = async (req, res) => {
   const { url, price } = req.body;
+  console.log(req.body.name);
 
   try {
     // Attempt to find an existing product by URL

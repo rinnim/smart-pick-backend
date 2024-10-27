@@ -3,7 +3,7 @@ const User = require("../models/user");
 
 const addOrRemoveFavorite = async (req, res) => {
     try {
-      console.log("Product ID: ", req.body.productId);
+      // console.log("Product ID: ", req.body.productId);
     const { productId } = req.body;
     const userId = req.user.id;
 
@@ -114,7 +114,7 @@ const addOrRemoveCompare = async (req, res) => {
         user.compares.push(productObjectId);
       } else {
         return res
-          .status(201)
+          .status(400)
           .json({ message: "You can only compare up to 2 products" });
       }
     }
