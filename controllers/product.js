@@ -1,143 +1,287 @@
-// controllers/productController.js
 const Product = require("../models/product");
+const { incrementClicks } = require("../utils/product_utils");
 
-// Get all products
-exports.getAllProducts = async (req, res) => {
+const getAllProducts = async (req, res) => {
   try {
     const products = await Product.find();
-    res.status(200).json(products);
+    return res.status(200).json({
+      status: "success",
+      message: "Products fetched successfully",
+      products: products,
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({
+      status: "error",
+      message: "Error fetching products",
+      error: error.message,
+    });
   }
 };
 
-// Create a new product
-exports.createProduct = async (req, res) => {
+const createProduct = async (req, res) => {
   const productData = req.body;
 
-  const product = new Product(productData);
   try {
-    // validate the product data against the schema
+    const product = new Product(productData);
     await product.validate();
     const savedProduct = await product.save();
-    res
-      .status(201)
-      .json({ message: "Product created successfully", data: savedProduct });
+    return res.status(200).json({
+      status: "success",
+      message: "Product created successfully",
+      data: savedProduct,
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    return res.status(400).json({
+      status: "error",
+      message: "Error creating product",
+      error: error.message,
+    });
   }
 };
 
-// Get a product by ID
-exports.getProductById = async (req, res) => {
+// Get product by id
+const getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const { id } = req.params;
+    const product = await Product.findById(id);
     if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+      return res.status(404).json({
+        status: "error",
+        message: "Product not found",
+      });
     }
-    res.status(200).json(product);
+
+    // Increment clicks
+    await incrementClicks(id);
+
+    return res.status(200).json({
+      status: "success",
+      product: product,
+      message: "Product fetched successfully",
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({
+      status: "error",
+      message: "Error fetching product",
+      error: error.message,
+    });
   }
 };
 
-// Update a product by ID
-exports.updateProduct = async (req, res) => {
+const updateProduct = async (req, res) => {
+  const { id } = req.params;
+  const updateData = req.body;
+
   try {
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
+    const product = await Product.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true,
     });
     if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+      return res.status(404).json({
+        status: "error",
+        message: "Product not found",
+      });
     }
-    res.status(200).json(product);
+    return res.status(200).json({
+      product: product,
+      message: "Product updated successfully",
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    return res.status(400).json({
+      status: "error",
+      message: "Error updating product",
+      error: error.message,
+    });
   }
 };
 
-// Delete a product by ID
-exports.deleteProduct = async (req, res) => {
+const deleteProduct = async (req, res) => {
+  const { productId } = req.params;
   try {
-    const product = await Product.findByIdAndDelete(req.params.id);
+    const product = await Product.findByIdAndDelete(productId);
     if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+      return res.status(404).json({
+        status: "error",
+        message: "Product not found",
+      });
     }
-    res.status(204).json(); // No content to send back
+
+    return res.status(200).json({
+      status: "success",
+      product: product,
+      message: "Product deleted successfully",
+    });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({
+      status: "error",
+      message: "Error deleting product",
+      error: error.message,
+    });
   }
 };
-// Get products by filters from query params
-// Get products by filters from query params
-exports.getProductsByFilters = async (req, res) => {
+
+const getProductsByFilters = async (req, res) => {
   const {
     category,
     subcategory,
     brands,
     minPrice,
     maxPrice,
+    shop,
+    stockStatus,
     limit = 12,
     page = 1,
     sortBy,
-    sortOrder,
     search,
   } = req.query;
 
-  // Create a query object
-  const query = {};
+  // Prepare the base aggregation pipeline
+  const pipeline = [];
 
-  // Add filters to the query object based on provided query params
-  if (category) query.category = category;
-  if (subcategory) query.subcategory = subcategory;
-
-  // Allow multiple brands
-  if (brands) {
-    const brandArray = Array.isArray(brands) ? brands : brands.split(","); // Split brands if they are in a comma-separated string
-    query.brand = { $in: brandArray }; // Match any of the brands
-  }
-
-  // Add price range filter if provided
-  if (minPrice || maxPrice) {
-    query.price = {};
-    if (minPrice) query.price.$gte = Number(minPrice); // Greater than or equal to minPrice
-    if (maxPrice) query.price.$lte = Number(maxPrice); // Less than or equal to maxPrice
-  }
-
-  // Add search filter for product name (case-insensitive)
-  if (search) {
-    query.name = { $regex: search, $options: 'i' }; 
-  }
-
-  // Set up sorting
-  let sortOptions = {};
-  if (sortBy && ["price", "discount"].includes(sortBy)) {
-    // Adjust the fields you want to sort by
-    sortOptions[sortBy] = sortOrder === "desc" ? -1 : 1; // Convert 'asc'/'desc' to -1/1
-  }
-
-  // Set up pagination
-  const options = {
-    limit: Number(limit),
-    skip: (page - 1) * limit,
-    sort: sortOptions,
+  // 1. Add match stage for filters
+  const matchStage = {
+    $match: {},
   };
 
-  try {
-    // console.log("Query:", query);
-    // console.log("Options:", options);
-    const products = await Product.find(query, null, options);
-    const totalProducts = await Product.countDocuments(query);
+  if (category) matchStage.$match.category = category;
+  if (subcategory) matchStage.$match.subcategory = subcategory;
+  if (shop) matchStage.$match.shop = shop;
+  if (stockStatus) {
+    matchStage.$match.stockStatus = { $regex: stockStatus, $options: "i" };
+  }
+  if (brands) {
+    const brandArray = Array.isArray(brands) ? brands : brands.split(",");
+    matchStage.$match.brand = { $in: brandArray };
+  }
+  if (minPrice || maxPrice) {
+    matchStage.$match.price = {};
+    if (minPrice) matchStage.$match.price.$gte = Number(minPrice);
+    if (maxPrice) matchStage.$match.price.$lte = Number(maxPrice);
+  }
+  console.log("--------------------------------");
 
-    res.status(200).json({
-      products,
-      totalPages: Math.ceil(totalProducts / limit),
-      currentPage: Number(page),
-      totalProducts,
+  // // Handle search
+  // if (search && search.trim()) {
+  //   const searchTerms = search
+  //     .trim()
+  //     .split(" ")
+  //     .map((term) => term.trim())
+  //     .filter(Boolean);
+
+  //   const regexPattern = searchTerms.map((term) => `(?=.*${term})`).join("");
+  //   console.log("regexPattern:", regexPattern);
+  //   matchStage.$match.name = { $regex: new RegExp(regexPattern, "i") };
+  // }
+
+  // // Handle search
+  // if (search && search.trim()) {
+  //   const searchTerms = search
+  //     .trim()
+  //     .split(" ")
+  //     .map((term) => term.trim())
+  //     .filter(Boolean);
+
+  //   // Modify regexPattern to prioritize matches that start with "apple watch"
+  //   const startWithPattern = `^(${searchTerms.join(".*")})`; // This ensures it starts with the search terms
+
+  //   console.log("startWithPattern:", startWithPattern);
+
+  //   // Main regex pattern with the start match
+  //   const regexPattern = searchTerms.map((term) => `(?=.*${term})`).join(""); // Partial match for all terms
+
+  //   // Match products starting with the search term or matching any of the terms in the name
+  //   matchStage.$match.name = {
+  //     $regex: new RegExp(regexPattern, "i"), // This regex will prioritize products starting with the search term
+  //   };
+
+  //   // Push the match stage with the updated regex
+  //   pipeline.push(matchStage);
+  // }
+
+  // Push match stage to pipeline
+  pipeline.push(matchStage);
+
+  // 4. Add sorting stage
+  const sortStage = { $sort: {} };
+
+  switch (sortBy) {
+    case "date-high":
+      sortStage.$sort.updatedAt = -1;
+      break;
+    case "date-low":
+      sortStage.$sort.updatedAt = 1;
+      break;
+    case "price-high":
+      sortStage.$sort.price = -1;
+      break;
+    case "price-low":
+      sortStage.$sort.price = 1;
+      break;
+    case "popularity-high":
+      sortStage.$sort.totalFavorites = -1;
+      break;
+    case "popularity-low":
+      sortStage.$sort.totalFavorites = 1;
+      break;
+    case "views-high":
+      sortStage.$sort.totalClicks = -1;
+      break;
+    case "views-low":
+      sortStage.$sort.totalClicks = 1;
+      break;
+    default:
+      sortStage.$sort.updatedAt = -1; // Default sort by newest
+  }
+
+  pipeline.push(sortStage);
+
+  // 5. Add pagination
+  const skip = (Number(page) - 1) * Number(limit);
+  pipeline.push({ $skip: skip });
+  pipeline.push({ $limit: Number(limit) });
+
+  try {
+    // Execute the aggregation pipeline
+    const products = await Product.aggregate(pipeline);
+
+    // Count total products for pagination
+    const countPipeline = [matchStage, { $count: "total" }];
+    const countResult = await Product.aggregate(countPipeline);
+    const totalProducts = countResult.length > 0 ? countResult[0].total : 0;
+
+    if (!products || products.length === 0) {
+      return res.status(404).json({
+        status: "error",
+        message: "No products found",
+      });
+    }
+
+    console.log("search:", search);
+    console.log(
+      "product's name:",
+      products.map((product) => product.name)
+    );
+    console.log("--------------------------------");
+    return res.status(200).json({
+      status: "success",
+      message: "Products fetched successfully",
+      data: {
+        products,
+        totalPages: Math.ceil(totalProducts / limit),
+        currentPage: Number(page),
+        totalProducts,
+        limit: Number(limit),
+      },
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error fetching products by filters:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Error fetching products by filters",
+      error: error.message,
+    });
   }
 };
 
@@ -145,116 +289,192 @@ exports.getProductsByFilters = async (req, res) => {
 
 
 
-// Create or update a product
-exports.createOrUpdateProduct = async (req, res) => {
-  const { url, price } = req.body;
-  console.log(req.body.name);
+
+
+
+const createOrUpdateProduct = async (req, res) => {
+  const { url, price, ...otherData } = req.body;
 
   try {
-    // Attempt to find an existing product by URL
     let product = await Product.findOne({ url });
 
-    // If the product exists, update it
     if (product) {
-      // Add current price to the price timeline before updating
-      // if (product.price !== price) {
       product.priceTimeline.push({
         date: new Date(),
         price: product.price,
       });
-      // }
 
-      // Update product fields with new data from request
-      Object.assign(product, req.body);
-      product.price = price; // Ensure the current price is updated
-
-      // Save the updated product
+      Object.assign(product, { price, ...otherData });
       const updatedProduct = await product.save();
-      return res
-        .status(201)
-        .json({
-          message: "Product updated successfully",
-          data: updatedProduct,
-        });
+
+      return res.status(200).json({
+        status: "success",
+        message: "Product updated successfully",
+        data: updatedProduct,
+      });
     } else {
-      // If the product does not exist, create a new one
-      const newProduct = new Product(req.body);
+      const newProduct = new Product({ url, price, ...otherData });
       const savedProduct = await newProduct.save();
-      return res
-        .status(201)
-        .json({ message: "Product created successfully", data: savedProduct });
+
+      return res.status(200).json({
+        status: "success",
+        message: "Product created successfully",
+        data: savedProduct,
+      });
     }
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    return res.status(400).json({
+      status: "error",
+      message: "Error creating or updating product",
+      error: error.message,
+    });
   }
 };
 
-// Get all the categories and their subcategories
-exports.getCategoriesAndSubcategories = async (req, res) => {
+const getCategoriesAndSubcategories = async (req, res) => {
   try {
-    const products = await Product.find(); // Fetch all products
+    const products = await Product.find();
     const categories = {};
 
     products.forEach((product) => {
       const { category, subcategory } = product;
-
       if (!categories[category]) {
-        categories[category] = new Set(); // Use a Set to avoid duplicates
+        categories[category] = new Set();
       }
-
       categories[category].add(subcategory);
     });
 
-    // Convert Set back to Array for each category
     for (const category in categories) {
       categories[category] = Array.from(categories[category]);
     }
 
     return res.status(200).json(categories);
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({
+      status: "error",
+      message: "Error fetching categories and subcategories",
+      error: error.message,
+    });
   }
 };
 
-// exports.getCategoriesAndSubcategories = async (req, res) => {
-//   try {
-//     const products = await Product.find(); // Fetch all products
-//     const categoriesMap = {};
-
-//     products.forEach((product) => {
-//       const { category, subcategory } = product;
-
-//       // Initialize the category if it doesn't exist
-//       if (!categoriesMap[category]) {
-//         categoriesMap[category] = {
-//           name: category,
-//           subCategories: new Set(),
-//         };
-//       }
-
-//       // Add the subcategory only if it doesn't already exist
-//       categoriesMap[category].subCategories.add(subcategory);
-//     });
-
-//     // Convert the Set to an Array for each category
-//     const categoriesArray = Object.values(categoriesMap).map((category) => ({
-//       name: category.name,
-//       subCategories: Array.from(category.subCategories).map((name) => ({
-//         name,
-//       })),
-//     }));
-
-//     return res.status(200).json(categoriesArray);
-//   } catch (error) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// };
-// Get all the brands
-exports.getBrands = async (req, res) => {
+const getBrands = async (req, res) => {
   try {
     const brands = await Product.find().distinct("brand");
     return res.status(200).json(brands);
   } catch (error) {
-    return res.status(500).json({ message: error.message });  
+    return res.status(500).json({
+      status: "error",
+      message: "Error fetching brands",
+      error: error.message,
+    });
   }
+};
+
+const getPopularProducts = async (req, res) => {
+  try {
+    const limit = req.query.limit || 12;
+    // Changed to sort by totalFavorites instead of totalClicks
+    const products = await Product.find()
+      .sort({ totalFavorites: -1 })
+      .limit(limit);
+
+    return res.status(200).json({
+      status: "success",
+      products: products,
+      message: "Popular products fetched successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "error",
+      message: "Error fetching popular products",
+      error: error.message,
+    });
+  }
+};
+
+// Find products with similar name and category
+const getSimilarProducts = async (req, res) => {
+  const { name, category } = req.body;
+  const query = { name: { $regex: name, $options: "i" } };
+  const products = await Product.find(query);
+  return res.status(200).json({
+    status: "success",
+    products: products,
+    message: "Similar products fetched successfully",
+  });
+};
+
+// Find products with similar name from different shops
+const getSimilarProductsByShop = async (req, res) => {
+  try {
+    const { id, limit = 8 } = req.query;
+    const product = await Product.findById(id);
+    const nameWords = product.name.split(" ").slice(0, 3).join(" ");
+    const query = {
+      name: { $regex: nameWords, $options: "i" },
+      shop: { $ne: product.shop },
+      brand: product.brand,
+    };
+
+    const products = await Product.find(query).limit(limit);
+
+    return res.status(200).json({
+      status: "success",
+      products: products,
+      message: "Similar products fetched successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      status: "error",
+      message: "Error fetching similar products",
+      error: error.message,
+    });
+  }
+};
+
+// Find products with similar name in the same shop
+const getSimilarProductsInShop = async (req, res) => {
+  try {
+    const { id, limit = 8 } = req.query;
+    const product = await Product.findById(id);
+    const nameWords = product.name.split(" ").slice(0, 3).join(" ");
+    const query = {
+      _id: { $ne: id },
+      name: { $regex: nameWords, $options: "i" },
+      shop: product.shop,
+    };
+
+    const products = await Product.find(query).limit(limit);
+
+    return res.status(200).json({
+      status: "success",
+      products: products,
+      message: "Similar products in shop fetched successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      status: "error",
+      message: "Error fetching similar products in shop",
+      error: error.message,
+    });
+  }
+};
+
+module.exports = {
+  getAllProducts,
+  createProduct,
+  getProductById,
+  updateProduct,
+  deleteProduct,
+  getProductsByFilters,
+  createOrUpdateProduct,
+  getCategoriesAndSubcategories,
+  getBrands,
+  getPopularProducts,
+  getSimilarProducts,
+  getSimilarProductsByShop,
+  getSimilarProductsInShop,
 };

@@ -1,8 +1,7 @@
 const nodemailer = require("nodemailer");
 
-// Create a transporter using nodemailer
+// Transporter for sending emails
 const transporter = nodemailer.createTransport({
-  // Configure your email service here
   service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
@@ -10,4 +9,5 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Export the transporter directly, not as an object
 module.exports = transporter;

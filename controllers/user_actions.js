@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const User = require("../models/user");
+const { incrementFavorites, decrementFavorites } = require("../utils/product_utils");
 
 const addOrRemoveFavorite = async (req, res) => {
     try {
@@ -25,13 +26,14 @@ const addOrRemoveFavorite = async (req, res) => {
       user.favorites = user.favorites.filter(
         (fav) => !fav.equals(productObjectId)
       );
+      await decrementFavorites(productId);
     } else {
       // Add the product to favorites
       user.favorites.push(productObjectId);
+      await incrementFavorites(productId);
     }
 
     await User.findByIdAndUpdate(userId, { favorites: user.favorites });
-    
 
     return res.status(200).json({
       message: isFavorite
@@ -49,9 +51,10 @@ const addOrRemoveFavorite = async (req, res) => {
 
 const addOrRemoveTracking = async (req, res) => {
   try {
-    const { productId } = req.body;
+    const { productId, expectedPrice } = req.body;
     const userId = req.user.id;
-
+    console.log("Product ID: ", productId);
+    console.log("Expected Price: ", expectedPrice);
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -59,27 +62,35 @@ const addOrRemoveTracking = async (req, res) => {
 
     const productObjectId = new mongoose.Types.ObjectId(productId);
     const isTracking = user.trackings.some((tracking) =>
-      tracking.equals(productObjectId)
+      tracking.product.equals(productObjectId)
     );
 
     if (isTracking) {
       // Remove the product from tracking
       user.trackings = user.trackings.filter(
-        (tracking) => !tracking.equals(productObjectId)
+        (tracking) => !tracking.product.equals(productObjectId)
       );
     } else {
+      // Validate expectedPrice
+      if (expectedPrice <= 0) {
+        return res.status(400).json({ message: "Expected price cannot be zero or negative" });
+      }
+      
       // Add the product to tracking
-      user.trackings.push(productObjectId);
+      user.trackings.push({ product: productObjectId, expectedPrice });
     }
 
-    await User.findByIdAndUpdate(userId, { trackings: user.trackings });
-    
+    const updatedUser = await User.findByIdAndUpdate(
+      userId, 
+      { trackings: user.trackings },
+      { new: true }
+    );
 
     return res.status(200).json({
       message: isTracking
         ? "Product removed from tracking"
         : "Product added to tracking",
-      trackings: user.trackings,
+      trackings: updatedUser.trackings,
     });
   } catch (error) {
     console.error(error);
@@ -144,9 +155,9 @@ const getUserData = async (req, res) => {
 
     // Fetch the user and populate the relevant fields
     const user = await User.findById(userId)
-      .populate("favorites") // Populate the favorites with Product details
-      .populate("trackings") // Populate the trackings with Tracking details
-      .populate("compares"); // Populate the compares with Product details
+      .populate('favorites')  // Populate favorites array
+      .populate('trackings.product')  // Populate the product field within trackings
+      .populate('compares');  // Populate compares array
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });

@@ -28,4 +28,17 @@ router.get('/categories', productController.getCategoriesAndSubcategories);
 
 // GET all brands
 router.get('/brands', productController.getBrands);
+
+// GET popular products
+router.get('/popular', productController.getPopularProducts);
+
+// GET similar products
+router.get('/similar', productController.getSimilarProducts);
+
+// GET similar products by shop
+router.get('/similar/different-shop', productController.getSimilarProductsByShop);
+
+// GET similar products in shop
+router.get('/similar/same-shop', productController.getSimilarProductsInShop);
+
 module.exports = router;

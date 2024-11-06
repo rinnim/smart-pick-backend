@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const userSchema = new mongoose.Schema(
+const adminSchema = new mongoose.Schema(
   {
     firstName: {
       type: String,
@@ -38,6 +38,7 @@ const userSchema = new mongoose.Schema(
         },
         expectedPrice: {
           type: Number,
+          min: [0, "Expected price cannot be negative"],
         },
       },
     ],
@@ -49,21 +50,10 @@ const userSchema = new mongoose.Schema(
     ],
     role: {
       type: String,
-      default: "user",
+      default: "admin",
     },
   },
-  {
-    timestamps: true,
-    // Remove password and version key in the JSON response 
-    toJSON: {
-      virtuals: true,
-      transform: function (doc, ret) {
-        delete ret.password; // Remove password from JSON
-        delete ret.__v; // Remove version key
-        return ret;
-      },
-    },
-  }
+  { timestamps: true }
 );
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = mongoose.model("Admin", adminSchema);

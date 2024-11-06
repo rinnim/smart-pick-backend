@@ -2,15 +2,16 @@ const express = require("express");
 const {
   register,
   login,
-  getUserById,
+  getAdmin,
   sendOTPforPasswordReset,
   verifyOTPforPasswordReset,
   resetPassword,
   sendOTPForEmailVerification,
+  verifyOTPForEmailVerification,
   changePassword,   
-  updateUserProfile,
-  deleteUserByUser,
-} = require("../controllers/user");
+  updateAdminProfile,
+  deleteAdmin,
+} = require("../controllers/admin");
 const { authenticateJWT } = require("../middlewares/auth");
 
 const router = express.Router();
@@ -21,12 +22,13 @@ router.post("/login", login);
 router.post("/forgot-password/send-otp", sendOTPforPasswordReset);
 router.post("/forgot-password/verify-otp", verifyOTPforPasswordReset);
 router.post("/signup/send-otp", sendOTPForEmailVerification);
+router.post("/signup/verify-otp", verifyOTPForEmailVerification);
 
 // Protected Route
-router.get("/profile", authenticateJWT, getUserById);
+router.get("/profile", authenticateJWT, getAdmin);
 router.post("/reset-password", authenticateJWT, resetPassword);
 router.post("/change-password", authenticateJWT, changePassword);
-router.put("/update-profile", authenticateJWT, updateUserProfile);
-router.delete("/delete-profile", authenticateJWT, deleteUserByUser);
+router.put("/update-profile", authenticateJWT, updateAdminProfile);
+router.delete("/delete-profile", authenticateJWT, deleteAdmin);
 
 module.exports = router;
