@@ -1,5 +1,6 @@
-const Product = require("../models/product");
+const Product = require("../models/product_model");
 
+// Increment the total clicks of a product
 const incrementClicks = async (productId) => {
   try {
     const product = await Product.findByIdAndUpdate(
@@ -18,6 +19,7 @@ const incrementClicks = async (productId) => {
   }
 };
 
+// Increment the total favoriteList of a product
 const incrementFavorites = async (productId) => {
   try {
     const product = await Product.findByIdAndUpdate(
@@ -33,6 +35,8 @@ const incrementFavorites = async (productId) => {
     throw error;
   }
 };
+
+// Decrement the total favoriteList of a product
 const decrementFavorites = async (productId) => {
   try {
     const product = await Product.findByIdAndUpdate(

@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const trackingSchema = new mongoose.Schema({
+const wishlistchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
@@ -15,4 +15,4 @@ const trackingSchema = new mongoose.Schema({
   notified: { type: Boolean, default: false },
 });
 
-module.exports = mongoose.model("Tracking", trackingSchema);
+module.exports = mongoose.model("Wishlist", wishlistchema);

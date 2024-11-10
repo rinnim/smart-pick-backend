@@ -1,7 +1,7 @@
 // routes/productRoutes.js
 const express = require('express');
 const router = express.Router();
-const productController = require('../controllers/product');
+const productController = require('../controllers/product_controller');
 
 // GET all products
 router.get('/find/all', productController.getAllProducts);
@@ -10,18 +10,13 @@ router.get('/find/all', productController.getAllProducts);
 router.get('/find', productController.getProductsByFilters);
 
 // GET a product by ID
-router.get('/find/:id', productController.getProductById);
+router.get('/find/:productId', productController.getProductById);
 
 // POST a new product
 router.post('/create', productController.createProduct);
 
 router.post('/new', productController.createOrUpdateProduct);
 
-// PUT update a product by ID
-router.put('/update/:id', productController.updateProduct);
-
-// DELETE a product by ID
-router.delete('/delete/:id', productController.deleteProduct);
 
 // GET all categories
 router.get('/categories', productController.getCategoriesAndSubcategories);

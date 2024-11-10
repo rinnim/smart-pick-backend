@@ -5,13 +5,14 @@ const { authenticateJWT } = require("../middlewares/auth");
 const router = express.Router();
 
 // Add to Favorites Route
-router.post("/favorites", authenticateJWT, userActions.addOrRemoveFavorite);
+router.post("/favoriteList", authenticateJWT, userActions.addOrRemoveProductFromFavoriteList);
 
-// Add to Tracking Route
-router.post("/trackings", authenticateJWT, userActions.addOrRemoveTracking);
+// Add to Wishlist Route
+router.post("/wishlist", authenticateJWT, userActions.addOrRemoveWishlist);
+
 
 // Add to Compare Route
-router.post("/compares", authenticateJWT, userActions.addOrRemoveCompare);
+router.post("/compares", authenticateJWT, userActions.addOrRemoveProductFromCompareList);
 
 // Get User Data Route
 router.get("/data", authenticateJWT, userActions.getUserData);

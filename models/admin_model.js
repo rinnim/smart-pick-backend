@@ -24,13 +24,13 @@ const adminSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    favorites: [
+    favoriteList: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Product",
       },
     ],
-    trackings: [
+    wishlist: [
       {
         product: {
           type: mongoose.Schema.Types.ObjectId,
@@ -38,7 +38,6 @@ const adminSchema = new mongoose.Schema(
         },
         expectedPrice: {
           type: Number,
-          min: [0, "Expected price cannot be negative"],
         },
       },
     ],

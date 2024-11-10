@@ -24,13 +24,13 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    favorites: [
+    favoriteList: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Product",
       },
     ],
-    trackings: [
+    wishlist: [
       {
         product: {
           type: mongoose.Schema.Types.ObjectId,

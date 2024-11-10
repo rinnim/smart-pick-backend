@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { authenticateJWT } = require('../middlewares/auth'); 
 const { getTotalUserAndAdmin, getUsersByDate } = require('../controllers/stat_report');
-const {getAllUsers, deleteUserByAdmin, searchUsersByAnyField} = require('../controllers/user');   
-const { deleteProduct } = require('../controllers/product');
+const {getAllUsers, deleteUserByAdmin, searchUsersByAnyField, updateUserByAdmin} = require('../controllers/user_controller');   
+const { deleteProduct } = require('../controllers/product_controller');
 // Import controllers
 const {
     getProductStockStatusByShop,
@@ -26,6 +26,7 @@ router.get("/users-by-date", getUsersByDate);
 router.get("/all-users", getAllUsers);
 router.get("/search-users", searchUsersByAnyField);
 router.delete("/delete-user/:userId", deleteUserByAdmin);
+router.put("/update-user/:userId", updateUserByAdmin);
 router.delete("/delete-product/:productId", deleteProduct);
 
 // Product Routes

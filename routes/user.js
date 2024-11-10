@@ -10,7 +10,7 @@ const {
   changePassword,   
   updateUserProfile,
   deleteUserByUser,
-} = require("../controllers/user");
+} = require("../controllers/user_controller");
 const { authenticateJWT } = require("../middlewares/auth");
 
 const router = express.Router();
